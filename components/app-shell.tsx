@@ -25,7 +25,9 @@ export default function AppShell({
           onAddContact={onAddContact}
           onToggleSidebar={() => setSidebarOpen(true)}
         />
-        <main className="flex-1 p-4 sm:p-6">{children}</main>
+        <main className="flex-1 p-5 sm:p-7">
+          <div className="page-enter">{children}</div>
+        </main>
       </div>
     </div>
   )

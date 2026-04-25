@@ -135,3 +135,12 @@ body {
 .overlay-fade {
   animation: overlayFade 0.2s ease-out;
 }
+
+/* Page transition */
+@keyframes pageSlide {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: pageSlide 0.2s ease-out;
+}

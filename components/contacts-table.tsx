@@ -79,6 +79,7 @@ export default function ContactsTable({
   const [statusFilter, setStatusFilter] = useState<string>('All')
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>(null)
   const [sortDir, setSortDir] = useState<SortDir>('asc')
 
@@ -93,12 +94,15 @@ export default function ContactsTable({
 
   const fetchContacts = useCallback(async () => {
     setLoading(true)
+    setError(null)
     const { data, error } = await supabase
       .from('contacts')
       .select('*')
       .order('created_at', { ascending: false })
 
-    if (!error && data) {
+    if (error) {
+      setError(error.message)
+    } else if (data) {
       setContacts(data as Contact[])
     }
     setLoading(false)
@@ -219,6 +223,19 @@ export default function ContactsTable({
 
   return (
     <>
+      {/* Error banner */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-4 flex items-start gap-3 fade-in">
+          <div className="shrink-0 w-5 h-5 mt-0.5 text-destructive">⚠</div>
+          <div>
+            <p className="text-sm font-medium text-destructive">Supabase error: {error}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Check your .env.local file has the correct NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-5 fade-in">
         {/* Search */}
