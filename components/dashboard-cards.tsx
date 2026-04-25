@@ -111,7 +111,7 @@ export default function DashboardCards() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
         {[...Array(4)].map((_, i) => (
           <SkeletonCard key={i} />
         ))}
@@ -120,7 +120,7 @@ export default function DashboardCards() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
       {cards.map((card, index) => {
         const Icon = card.icon
         const value = data ? data[card.key] : 0
@@ -143,12 +143,12 @@ export default function DashboardCards() {
                 <Icon className={`w-5 h-5 ${card.textColor}`} />
               </div>
             </div>
-            <p className="text-2xl font-bold text-foreground tracking-tight">
+            <p className="text-2xl font-bold text-foreground tracking-tight mt-1">
               {displayValue}
             </p>
-            <div className="mt-2 flex items-center gap-1.5">
+            <div className="mt-3 flex items-center gap-2">
               <div
-                className={`h-1.5 w-8 rounded-full bg-gradient-to-r ${card.gradient}`}
+                className={`h-1 w-10 rounded-full bg-gradient-to-r ${card.gradient}`}
               />
               <span className="text-xs text-muted-foreground">Live data</span>
             </div>
