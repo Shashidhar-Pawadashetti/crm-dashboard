@@ -60,12 +60,12 @@ const cards = [
 
 function SkeletonCard() {
   return (
-    <div className="bg-card border border-border rounded-2xl p-5">
-      <div className="flex items-center justify-between mb-4">
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="mb-4 flex items-center justify-between">
         <div className="skeleton h-4 w-24 rounded" />
         <div className="skeleton h-10 w-10 rounded-xl" />
       </div>
-      <div className="skeleton h-8 w-20 rounded mb-1" />
+      <div className="mb-1 h-8 w-20 rounded skeleton" />
       <div className="skeleton h-3 w-32 rounded" />
     </div>
   )
@@ -111,7 +111,7 @@ export default function DashboardCards() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+      <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4 w-full">
         {[...Array(4)].map((_, i) => (
           <SkeletonCard key={i} />
         ))}
@@ -120,7 +120,7 @@ export default function DashboardCards() {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+    <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4 w-full">
       {cards.map((card, index) => {
         const Icon = card.icon
         const value = data ? data[card.key] : 0
@@ -130,20 +130,20 @@ export default function DashboardCards() {
         return (
           <div
             key={card.key}
-            className="bg-card border border-border rounded-2xl p-5 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 transition-all duration-300 fade-in group"
+            className="group fade-in rounded-2xl border border-border bg-card p-5 transition-all duration-300 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20"
             style={{ animationDelay: `${index * 80}ms` }}
           >
-            <div className="flex items-center justify-between mb-3">
+            <div className="mb-3 flex items-center justify-between">
               <p className="text-sm font-medium text-muted-foreground">
                 {card.label}
               </p>
               <div
-                className={`w-10 h-10 rounded-xl ${card.bgLight} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}
+                className={`flex h-10 w-10 items-center justify-center rounded-xl ${card.bgLight} transition-transform duration-300 group-hover:scale-110`}
               >
-                <Icon className={`w-5 h-5 ${card.textColor}`} />
+                <Icon className={`h-5 w-5 ${card.textColor}`} />
               </div>
             </div>
-            <p className="text-2xl font-bold text-foreground tracking-tight mt-1">
+            <p className="mt-1 text-2xl font-bold tracking-tight text-foreground">
               {displayValue}
             </p>
             <div className="mt-3 flex items-center gap-2">

@@ -5,19 +5,14 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!supabaseUrl) {
   console.error(
-    '[NexCRM] Missing NEXT_PUBLIC_SUPABASE_URL — add it to your .env.local file. ' +
-    'Get it from https://supabase.com/dashboard → Settings → API.'
+    '[NexCRM] Missing NEXT_PUBLIC_SUPABASE_URL. Add it to .env.local from Supabase Dashboard > Settings > API.'
   )
 }
 
 if (!supabaseAnonKey) {
   console.error(
-    '[NexCRM] Missing NEXT_PUBLIC_SUPABASE_ANON_KEY — add it to your .env.local file. ' +
-    'Get it from https://supabase.com/dashboard → Settings → API → anon/public key.'
+    '[NexCRM] Missing NEXT_PUBLIC_SUPABASE_ANON_KEY. Add it to .env.local from Supabase Dashboard > Settings > API > anon/public key.'
   )
 }
 
-export const supabase = createClient(
-  supabaseUrl ?? '',
-  supabaseAnonKey ?? ''
-)
+export const supabase = createClient(supabaseUrl ?? '', supabaseAnonKey ?? '')

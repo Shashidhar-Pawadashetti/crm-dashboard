@@ -42,17 +42,19 @@ export default function Sidebar({
       <aside
         className={`
           fixed top-0 left-0 z-50 h-full w-[240px]
-          bg-sidebar flex flex-col
+          bg-sidebar/95 backdrop-blur-xl flex flex-col
           transition-transform duration-300 ease-in-out
+          border-r border-white/5
           lg:translate-x-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          min-w-[240px]
         `}
       >
         {/* Logo area */}
         <div className="flex items-center justify-between h-16 px-5 border-b border-white/5">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:shadow-indigo-500/40 transition-shadow">
-              <Zap className="w-4.5 h-4.5 text-white" />
+          <Link href="/" className="group flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30 transition-shadow group-hover:shadow-indigo-500/45">
+              <Zap className="h-[18px] w-[18px] text-white" />
             </div>
             <span className="text-lg font-bold text-white tracking-tight">
               Nex<span className="text-indigo-400">CRM</span>
@@ -67,7 +69,7 @@ export default function Sidebar({
         </div>
 
         {/* Nav links */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
           {navItems.map((item) => {
             const isActive = pathname === item.href
             const Icon = item.icon
@@ -77,11 +79,11 @@ export default function Sidebar({
                 href={item.href}
                 onClick={onClose}
                 className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium
+                  flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium
                   transition-all duration-200 group relative
                   ${
                     isActive
-                      ? 'bg-indigo-500/15 text-white'
+                      ? 'bg-indigo-500/20 text-white shadow-[0_0_0_1px_rgba(129,140,248,0.2)]'
                       : 'text-sidebar-foreground hover:text-white hover:bg-sidebar-hover'
                   }
                 `}
@@ -101,7 +103,7 @@ export default function Sidebar({
         </nav>
 
         {/* Bottom section */}
-        <div className="p-4 mx-3 mb-3 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-600/10 border border-indigo-500/10">
+        <div className="mx-3 mb-3 rounded-xl border border-indigo-500/15 bg-gradient-to-br from-indigo-500/15 to-purple-600/15 p-4">
           <p className="text-xs font-medium text-indigo-300 mb-1">Pro Plan</p>
           <p className="text-[11px] text-sidebar-foreground leading-relaxed">
             Unlimited contacts and advanced analytics

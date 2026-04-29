@@ -1,68 +1,129 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Download, BarChart3, CalendarDays, TrendingUp } from 'lucide-react'
 import AppShell from '@/components/app-shell'
 import { supabase } from '@/lib/supabase'
 import type { Contact } from '@/lib/types'
-import {
-  Download,
-  Trophy,
-  BarChart3,
-  TrendingUp,
-  CalendarDays,
-  Target,
-  IndianRupee,
-  Percent,
-  Zap,
-} from 'lucide-react'
+import { formatDatabaseError } from '@/lib/db-error'
 
 type Status = Contact['status']
 
-const statusMeta: Record<Status, { color: string; bar: string; bg: string }> = {
-  Lead:     { color: 'text-blue-600 dark:text-blue-400',    bar: 'bg-blue-500',    bg: 'bg-blue-500/10' },
-  Active:   { color: 'text-emerald-600 dark:text-emerald-400', bar: 'bg-emerald-500', bg: 'bg-emerald-500/10' },
-  Inactive: { color: 'text-slate-500 dark:text-slate-400',  bar: 'bg-slate-400',   bg: 'bg-slate-400/10' },
-  Churned:  { color: 'text-red-600 dark:text-red-400',      bar: 'bg-red-500',     bg: 'bg-red-500/10' },
+const STATUS_ORDER: Status[] = ['Lead', 'Active', 'Inactive', 'Churned']
+
+const STATUS_META: Record<
+  Status,
+  {
+    barClassName: string
+    textClassName: string
+    badgeClassName: string
+  }
+> = {
+  Lead: {
+    barClassName: 'bg-blue-500',
+    textClassName: 'text-blue-600 dark:text-blue-400',
+    badgeClassName: 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  },
+  Active: {
+    barClassName: 'bg-emerald-500',
+    textClassName: 'text-emerald-600 dark:text-emerald-400',
+    badgeClassName:
+      'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+  },
+  Inactive: {
+    barClassName: 'bg-slate-400',
+    textClassName: 'text-slate-600 dark:text-slate-400',
+    badgeClassName: 'border-slate-500/20 bg-slate-500/10 text-slate-600 dark:text-slate-400',
+  },
+  Churned: {
+    barClassName: 'bg-red-500',
+    textClassName: 'text-red-600 dark:text-red-400',
+    badgeClassName: 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400',
+  },
 }
 
 function formatCurrency(value: number): string {
-  if (value >= 10000000) return '₹' + (value / 10000000).toFixed(1) + 'Cr'
-  if (value >= 100000) return '₹' + (value / 100000).toFixed(1) + 'L'
-  return '₹' + value.toLocaleString('en-IN')
+  return `\u20B9${Math.round(value).toLocaleString('en-IN')}`
+}
+
+function getMonthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
 function getMonthLabel(date: Date): string {
   return date.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })
 }
 
-/* ---------- skeletons ---------- */
-
-function SkeletonBar({ w }: { w: number }) {
-  return (
-    <div className="flex items-center gap-3 mb-3">
-      <div className="skeleton h-4 w-16 rounded" />
-      <div className="flex-1 h-7 rounded-lg overflow-hidden bg-muted">
-        <div className="skeleton h-full rounded-lg" style={{ width: `${w}%` }} />
-      </div>
-      <div className="skeleton h-4 w-10 rounded" />
-    </div>
-  )
+function escapeCsv(value: string | number): string {
+  const stringValue = String(value ?? '')
+  return stringValue.includes(',') ||
+    stringValue.includes('"') ||
+    stringValue.includes('\n')
+    ? `"${stringValue.replace(/"/g, '""')}"`
+    : stringValue
 }
 
-function SkeletonSection({ lines, className = '' }: { lines: number; className?: string }) {
+function ReportCard({
+  title,
+  icon: Icon,
+  iconClassName,
+  children,
+  className = '',
+}: {
+  title: string
+  icon: typeof BarChart3
+  iconClassName: string
+  children: React.ReactNode
+  className?: string
+}) {
   return (
-    <div className={`bg-card border border-border rounded-2xl p-6 ${className}`}>
-      <div className="skeleton h-5 w-36 rounded mb-5" />
-      {[...Array(lines)].map((_, i) => (
-        <div key={i} className="flex items-center gap-3 mb-3">
-          <div className="skeleton h-4 rounded" style={{ width: `${50 + (i * 17) % 40}%` }} />
+    <section className={`rounded-2xl border border-border bg-card p-6 ${className}`}>
+      <div className="mb-5 flex items-center gap-3">
+        <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${iconClassName}`}>
+          <Icon className="h-4 w-4" />
         </div>
-      ))}
-    </div>
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      </div>
+      {children}
+    </section>
   )
 }
 
-/* ---------- page ---------- */
+function SkeletonSection({
+  titleWidth,
+  rows,
+  className = '',
+}: {
+  titleWidth: string
+  rows: number
+  className?: string
+}) {
+  return (
+    <div className={`rounded-2xl border border-border bg-card p-6 ${className}`}>
+      <div className="mb-5 flex items-center gap-3">
+        <div className="skeleton h-9 w-9 rounded-xl" />
+        <div className="skeleton h-5 rounded" style={{ width: titleWidth }} />
+      </div>
+      <div className="space-y-3">
+        {Array.from({ length: rows }).map((_, index) => (
+          <div key={index} className="flex items-center gap-3">
+            <div
+              className="skeleton h-4 rounded"
+              style={{ width: `${56 + ((index * 13) % 20)}px` }}
+            />
+            <div className="h-7 flex-1 rounded-lg bg-muted">
+              <div
+                className="skeleton h-full rounded-lg"
+                style={{ width: `${35 + ((index * 17) % 45)}%` }}
+              />
+            </div>
+            <div className="skeleton h-4 w-10 rounded" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function ReportsPage() {
   const [contacts, setContacts] = useState<Contact[]>([])
@@ -72,34 +133,50 @@ export default function ReportsPage() {
   const fetchContacts = useCallback(async () => {
     setLoading(true)
     setError(null)
+
     const { data, error } = await supabase
       .from('contacts')
       .select('*')
       .order('created_at', { ascending: false })
 
     if (error) {
-      setError(error.message)
+      setError(formatDatabaseError(error, 'load reports'))
+      setContacts([])
     } else if (data) {
       setContacts(data as Contact[])
     }
+
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    fetchContacts()
+    const timeoutId = window.setTimeout(() => {
+      void fetchContacts()
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
   }, [fetchContacts])
 
-  /* ---- computed analytics ---- */
-
-  const total = contacts.length
+  const totalContacts = contacts.length
 
   const statusCounts = useMemo(() => {
-    const map: Record<Status, number> = { Lead: 0, Active: 0, Inactive: 0, Churned: 0 }
-    for (const c of contacts) if (map[c.status] !== undefined) map[c.status]++
-    return map
+    const counts: Record<Status, number> = {
+      Lead: 0,
+      Active: 0,
+      Inactive: 0,
+      Churned: 0,
+    }
+
+    for (const contact of contacts) {
+      counts[contact.status] += 1
+    }
+
+    return counts
   }, [contacts])
 
-  const top5 = useMemo(
+  const topContacts = useMemo(
     () =>
       [...contacts]
         .sort((a, b) => (Number(b.deal_value) || 0) - (Number(a.deal_value) || 0))
@@ -108,307 +185,293 @@ export default function ReportsPage() {
   )
 
   const summaryStats = useMemo(() => {
-    if (total === 0)
-      return { avg: 0, highest: 0, activePipeline: 0, conversion: 0 }
-
-    const values = contacts.map((c) => Number(c.deal_value) || 0)
-    const avg = values.reduce((a, b) => a + b, 0) / total
-    const highest = Math.max(...values)
+    const dealValues = contacts.map((contact) => Number(contact.deal_value) || 0)
+    const totalDealValue = dealValues.reduce((sum, value) => sum + value, 0)
+    const highestDeal = dealValues.length > 0 ? Math.max(...dealValues) : 0
     const activePipeline = contacts
-      .filter((c) => c.status === 'Active')
-      .reduce((s, c) => s + (Number(c.deal_value) || 0), 0)
-    const conversion = (statusCounts.Active / total) * 100
+      .filter((contact) => contact.status === 'Active')
+      .reduce((sum, contact) => sum + (Number(contact.deal_value) || 0), 0)
+    const averageDealValue = totalContacts > 0 ? totalDealValue / totalContacts : 0
+    const conversionRate =
+      totalContacts > 0 ? (statusCounts.Active / totalContacts) * 100 : 0
 
-    return { avg, highest, activePipeline, conversion }
-  }, [contacts, total, statusCounts])
-
-  const monthlyData = useMemo(() => {
-    const now = new Date()
-    const months: { label: string; count: number; key: string }[] = []
-
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      months.push({ label: getMonthLabel(d), count: 0, key })
+    return {
+      averageDealValue,
+      highestDeal,
+      activePipeline,
+      conversionRate,
     }
+  }, [contacts, statusCounts.Active, totalContacts])
 
-    for (const c of contacts) {
-      if (!c.created_at) continue
-      const d = new Date(c.created_at)
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-      const m = months.find((x) => x.key === key)
-      if (m) m.count++
+  const monthlyBreakdown = useMemo(() => {
+    const now = new Date()
+    const months = Array.from({ length: 6 }, (_, index) => {
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1)
+      return {
+        key: getMonthKey(monthDate),
+        label: getMonthLabel(monthDate),
+        count: 0,
+      }
+    })
+
+    for (const contact of contacts) {
+      if (!contact.created_at) continue
+      const createdAt = new Date(contact.created_at)
+      const key = getMonthKey(createdAt)
+      const month = months.find((entry) => entry.key === key)
+      if (month) {
+        month.count += 1
+      }
     }
 
     return months
   }, [contacts])
 
-  const maxMonthly = Math.max(...monthlyData.map((m) => m.count), 1)
-
-  /* ---- export ---- */
+  const maxMonthlyCount = Math.max(1, ...monthlyBreakdown.map((month) => month.count))
 
   const handleExport = () => {
-    const lines: string[] = []
+    const rows: string[] = []
 
-    lines.push('NexCRM Report')
-    lines.push('')
-    lines.push('Status Breakdown')
-    lines.push('Status,Count,Percentage')
-    for (const s of ['Lead', 'Active', 'Inactive', 'Churned'] as Status[]) {
-      lines.push(`${s},${statusCounts[s]},${total ? ((statusCounts[s] / total) * 100).toFixed(1) : 0}%`)
-    }
-
-    lines.push('')
-    lines.push('Top 5 Contacts by Deal Value')
-    lines.push('Rank,Name,Company,Deal Value')
-    top5.forEach((c, i) => {
-      const name = c.name.includes(',') ? `"${c.name}"` : c.name
-      const co = (c.company || '').includes(',') ? `"${c.company}"` : c.company || ''
-      lines.push(`${i + 1},${name},${co},${c.deal_value}`)
+    rows.push('Section,Metric,Value')
+    STATUS_ORDER.forEach((status) => {
+      const percentage =
+        totalContacts > 0 ? ((statusCounts[status] / totalContacts) * 100).toFixed(1) : '0.0'
+      rows.push(
+        [
+          'Status Breakdown',
+          `${status} Count`,
+          `${statusCounts[status]} (${percentage}%)`,
+        ].map(escapeCsv).join(',')
+      )
     })
 
-    lines.push('')
-    lines.push('Summary Stats')
-    lines.push(`Average Deal Value,${summaryStats.avg.toFixed(0)}`)
-    lines.push(`Highest Deal,${summaryStats.highest}`)
-    lines.push(`Active Pipeline,${summaryStats.activePipeline}`)
-    lines.push(`Conversion Rate,${summaryStats.conversion.toFixed(1)}%`)
+    rows.push(['Summary Stats', 'Average Deal Value', formatCurrency(summaryStats.averageDealValue)].map(escapeCsv).join(','))
+    rows.push(['Summary Stats', 'Highest Deal', formatCurrency(summaryStats.highestDeal)].map(escapeCsv).join(','))
+    rows.push(['Summary Stats', 'Total Active Pipeline', formatCurrency(summaryStats.activePipeline)].map(escapeCsv).join(','))
+    rows.push(['Summary Stats', 'Conversion Rate', `${summaryStats.conversionRate.toFixed(1)}%`].map(escapeCsv).join(','))
 
-    lines.push('')
-    lines.push('Monthly Contacts Added')
-    lines.push('Month,Count')
-    for (const m of monthlyData) {
-      lines.push(`${m.label},${m.count}`)
-    }
+    topContacts.forEach((contact, index) => {
+      rows.push(
+        [
+          'Top Contacts',
+          `#${index + 1}`,
+          `${contact.name} - ${contact.company || 'No company'} - ${formatCurrency(
+            Number(contact.deal_value) || 0
+          )}`,
+        ]
+          .map(escapeCsv)
+          .join(',')
+      )
+    })
 
-    const csv = lines.join('\n')
+    monthlyBreakdown.forEach((month) => {
+      rows.push(
+        ['Monthly Breakdown', month.label, month.count].map(escapeCsv).join(',')
+      )
+    })
+
+    const csv = rows.join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `nexcrm-report-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `nexcrm-report-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
     URL.revokeObjectURL(url)
   }
 
-  /* ---- render ---- */
-
   return (
     <AppShell title="Reports">
-      {/* Error */}
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-4 flex items-start gap-3 fade-in">
-          <div className="shrink-0 text-destructive">⚠</div>
-          <div>
-            <p className="text-sm font-medium text-destructive">Supabase error: {error}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Check your .env.local file has correct credentials.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Export button */}
-      {!loading && contacts.length > 0 && (
-        <div className="flex justify-end mb-5 fade-in">
+      <div className="w-full max-w-full space-y-5">
+        <div className="flex justify-end">
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white text-sm font-medium shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all active:scale-95"
+            disabled={loading || contacts.length === 0}
+            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-all hover:from-indigo-600 hover:to-purple-700 hover:shadow-indigo-500/35 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
           >
-            <Download className="w-4 h-4" />
+            <Download className="h-4 w-4" />
             Export Report
           </button>
         </div>
-      )}
 
-      {loading ? (
-        /* ---------- SKELETON ---------- */
-        <div className="space-y-5">
-          <SkeletonSection lines={4} />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            <SkeletonSection lines={5} />
-            <SkeletonSection lines={4} />
+        {error && (
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-500">
+            {error}
           </div>
-          <SkeletonSection lines={3} />
-        </div>
-      ) : (
-        <div className="space-y-5 fade-in">
-          {/* ===== SECTION 1 — Status Breakdown ===== */}
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                <BarChart3 className="w-4 h-4 text-indigo-500" />
-              </div>
-              <h2 className="text-base font-semibold text-foreground">Status Breakdown</h2>
+        )}
+
+        {loading ? (
+          <div className="space-y-5 w-full">
+            <SkeletonSection titleWidth="160px" rows={4} />
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 w-full">
+              <SkeletonSection titleWidth="170px" rows={5} />
+              <SkeletonSection titleWidth="140px" rows={4} />
             </div>
-
-            {total === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                No contacts to analyze. Add some contacts first.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {(['Lead', 'Active', 'Inactive', 'Churned'] as Status[]).map((s) => {
-                  const count = statusCounts[s]
-                  const pct = total > 0 ? (count / total) * 100 : 0
-                  const meta = statusMeta[s]
-                  return (
-                    <div key={s} className="flex items-center gap-3">
-                      <div className="w-20 shrink-0 flex items-center justify-between">
-                        <span className={`text-sm font-medium ${meta.color}`}>{s}</span>
-                        <span className="text-xs text-muted-foreground ml-1">{count}</span>
-                      </div>
-                      <div className="flex-1 h-7 rounded-lg bg-muted overflow-hidden">
-                        <div
-                          className={`h-full rounded-lg ${meta.bar} transition-all duration-700 ease-out`}
-                          style={{ width: `${Math.max(pct, 2)}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-semibold text-foreground w-12 text-right tabular-nums">
-                        {pct.toFixed(1)}%
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+            <SkeletonSection titleWidth="150px" rows={6} />
           </div>
-
-          {/* ===== SECTION 2 — Top 5 + Summary ===== */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Top 5 */}
-            <div className="bg-card border border-border rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                  <Trophy className="w-4 h-4 text-amber-500" />
+        ) : (
+          <div className="space-y-5 w-full">
+            <ReportCard
+              title="Status Breakdown"
+              icon={BarChart3}
+              iconClassName="bg-indigo-500/10 text-indigo-500"
+            >
+              {totalContacts === 0 ? (
+                <div className="py-8 text-center text-sm text-muted-foreground">
+                  No contacts to analyze yet.
                 </div>
-                <h2 className="text-base font-semibold text-foreground">Top 5 by Deal Value</h2>
-              </div>
-
-              {top5.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">No contacts yet.</p>
               ) : (
-                <div className="space-y-2.5">
-                  {top5.map((c, i) => (
-                    <div
-                      key={c.id}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-muted/40 hover:bg-muted transition-colors"
-                    >
-                      <span className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
-                        {i + 1}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {c.company || 'No company'}
-                        </p>
+                <div className="space-y-3">
+                  {STATUS_ORDER.map((status) => {
+                    const count = statusCounts[status]
+                    const percentage =
+                      totalContacts > 0 ? (count / totalContacts) * 100 : 0
+                    const meta = STATUS_META[status]
+
+                    return (
+                      <div key={status} className="flex items-center gap-3">
+                        <div className="flex w-24 shrink-0 items-center justify-between gap-2">
+                          <span className={`text-sm font-medium ${meta.textClassName}`}>
+                            {status}
+                          </span>
+                          <span className="text-xs text-muted-foreground">{count}</span>
+                        </div>
+                        <div className="h-7 flex-1 overflow-hidden rounded-lg bg-muted">
+                          <div
+                            className={`h-full rounded-lg ${meta.barClassName} transition-all duration-700`}
+                            style={{ width: `${Math.max(percentage, count > 0 ? 4 : 0)}%` }}
+                          />
+                        </div>
+                        <span className="w-12 shrink-0 text-right text-xs font-semibold tabular-nums text-foreground">
+                          {percentage.toFixed(1)}%
+                        </span>
                       </div>
-                      <span className="text-sm font-semibold text-foreground tabular-nums shrink-0">
-                        {formatCurrency(Number(c.deal_value) || 0)}
-                      </span>
+                    )
+                  })}
+                </div>
+              )}
+            </ReportCard>
+
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 w-full">
+              <ReportCard
+                title="Top 5 by Deal Value"
+                icon={TrendingUp}
+                iconClassName="bg-amber-500/10 text-amber-500"
+              >
+                {topContacts.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-muted-foreground">
+                    No contacts yet.
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {topContacts.map((contact, index) => (
+                      <div
+                        key={contact.id}
+                        className="flex items-center gap-3 rounded-xl bg-muted/40 p-3 transition-colors hover:bg-muted"
+                      >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white">
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-foreground">
+                            {contact.name}
+                          </p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {contact.company || 'No company'}
+                          </p>
+                        </div>
+                        <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
+                          {formatCurrency(Number(contact.deal_value) || 0)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </ReportCard>
+
+              <ReportCard
+                title="Summary Stats"
+                icon={TrendingUp}
+                iconClassName="bg-emerald-500/10 text-emerald-500"
+              >
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {[
+                    {
+                      label: 'Average Deal Value',
+                      value: formatCurrency(summaryStats.averageDealValue),
+                      badgeClassName:
+                        'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400',
+                    },
+                    {
+                      label: 'Highest Deal',
+                      value: formatCurrency(summaryStats.highestDeal),
+                      badgeClassName:
+                        'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+                    },
+                    {
+                      label: 'Total Active Pipeline',
+                      value: formatCurrency(summaryStats.activePipeline),
+                      badgeClassName:
+                        'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+                    },
+                    {
+                      label: 'Conversion Rate',
+                      value: `${summaryStats.conversionRate.toFixed(1)}%`,
+                      badgeClassName:
+                        'border-purple-500/20 bg-purple-500/10 text-purple-600 dark:text-purple-400',
+                    },
+                  ].map((stat) => (
+                    <div
+                      key={stat.label}
+                      className="rounded-xl border border-border bg-muted/40 p-4"
+                    >
+                      <p className="text-xs text-muted-foreground">{stat.label}</p>
+                      <div className="mt-2 flex items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-foreground">{stat.value}</p>
+                        <span
+                          className={`inline-flex rounded-lg border px-2 py-1 text-[11px] font-semibold ${stat.badgeClassName}`}
+                        >
+                          Live
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
-              )}
+              </ReportCard>
             </div>
 
-            {/* Summary stats */}
-            <div className="bg-card border border-border rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-emerald-500" />
-                </div>
-                <h2 className="text-base font-semibold text-foreground">Summary Stats</h2>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[
-                  {
-                    label: 'Average Deal',
-                    value: formatCurrency(summaryStats.avg),
-                    icon: IndianRupee,
-                    iconBg: 'bg-blue-500/10',
-                    iconColor: 'text-blue-500',
-                  },
-                  {
-                    label: 'Highest Deal',
-                    value: formatCurrency(summaryStats.highest),
-                    icon: Zap,
-                    iconBg: 'bg-amber-500/10',
-                    iconColor: 'text-amber-500',
-                  },
-                  {
-                    label: 'Active Pipeline',
-                    value: formatCurrency(summaryStats.activePipeline),
-                    icon: Target,
-                    iconBg: 'bg-emerald-500/10',
-                    iconColor: 'text-emerald-500',
-                  },
-                  {
-                    label: 'Conversion Rate',
-                    value: `${summaryStats.conversion.toFixed(1)}%`,
-                    icon: Percent,
-                    iconBg: 'bg-purple-500/10',
-                    iconColor: 'text-purple-500',
-                  },
-                ].map((stat) => {
-                  const Icon = stat.icon
+            <ReportCard
+              title="Monthly Breakdown"
+              icon={CalendarDays}
+              iconClassName="bg-indigo-500/10 text-indigo-500"
+            >
+              <div className="space-y-2.5">
+                {monthlyBreakdown.map((month) => {
+                  const percentage = (month.count / maxMonthlyCount) * 100
                   return (
-                    <div
-                      key={stat.label}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-muted/40"
-                    >
-                      <div
-                        className={`w-9 h-9 rounded-xl ${stat.iconBg} flex items-center justify-center shrink-0`}
-                      >
-                        <Icon className={`w-4 h-4 ${stat.iconColor}`} />
+                    <div key={month.key} className="flex items-center gap-3">
+                      <span className="w-16 shrink-0 text-right text-xs font-medium text-muted-foreground">
+                        {month.label}
+                      </span>
+                      <div className="h-7 flex-1 overflow-hidden rounded-lg bg-muted">
+                        <div
+                          className="h-full rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-700"
+                          style={{
+                            width: `${Math.max(percentage, month.count > 0 ? 6 : 0)}%`,
+                          }}
+                        />
                       </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">{stat.label}</p>
-                        <p className="text-sm font-semibold text-foreground">{stat.value}</p>
-                      </div>
+                      <span className="w-8 shrink-0 text-right text-xs font-semibold tabular-nums text-foreground">
+                        {month.count}
+                      </span>
                     </div>
                   )
                 })}
               </div>
-            </div>
+            </ReportCard>
           </div>
-
-          {/* ===== SECTION 3 — Monthly Breakdown ===== */}
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-                <CalendarDays className="w-4 h-4 text-indigo-500" />
-              </div>
-              <h2 className="text-base font-semibold text-foreground">
-                Contacts Added — Last 6 Months
-              </h2>
-            </div>
-
-            <div className="space-y-2.5">
-              {monthlyData.map((m) => {
-                const pct = maxMonthly > 0 ? (m.count / maxMonthly) * 100 : 0
-                return (
-                  <div key={m.key} className="flex items-center gap-3">
-                    <span className="w-16 shrink-0 text-xs font-medium text-muted-foreground text-right">
-                      {m.label}
-                    </span>
-                    <div className="flex-1 h-7 rounded-lg bg-muted overflow-hidden">
-                      <div
-                        className="h-full rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-700 ease-out"
-                        style={{ width: `${Math.max(pct, 2)}%` }}
-                      />
-                    </div>
-                    <span className="text-xs font-semibold text-foreground w-8 text-right tabular-nums">
-                      {m.count}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </AppShell>
   )
 }

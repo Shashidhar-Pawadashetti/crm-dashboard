@@ -1,281 +1,328 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useTheme } from 'next-themes'
+import { useMemo, useState } from 'react'
+import {
+  Check,
+  Database,
+  Download,
+  ExternalLink,
+  Info,
+  Mail,
+  Monitor,
+  Moon,
+  Pencil,
+  Shield,
+  Sun,
+  Trash2,
+  User,
+} from 'lucide-react'
 import AppShell from '@/components/app-shell'
 import ConfirmDialog from '@/components/confirm-dialog'
+import { useTheme } from '@/components/theme-provider'
 import { supabase } from '@/lib/supabase'
 import type { Contact } from '@/lib/types'
-import {
-  User,
-  Mail,
-  Shield,
-  Pencil,
-  Sun,
-  Moon,
-  Monitor,
-  Check,
-  Download,
-  Trash2,
-  ExternalLink,
-  Zap,
-  Palette,
-  Database,
-  Info,
-} from 'lucide-react'
+import { formatDatabaseError } from '@/lib/db-error'
+
+type ThemeOption = 'light' | 'dark' | 'system'
+
+const THEME_OPTIONS: {
+  value: ThemeOption
+  label: string
+  icon: typeof Sun
+}[] = [
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'dark', label: 'Dark', icon: Moon },
+  { value: 'system', label: 'System', icon: Monitor },
+]
+
+function escapeCsv(value: string | number) {
+  const stringValue = String(value ?? '')
+  return stringValue.includes(',') ||
+    stringValue.includes('"') ||
+    stringValue.includes('\n')
+    ? `"${stringValue.replace(/"/g, '""')}"`
+    : stringValue
+}
+
+function SectionCard({
+  title,
+  icon: Icon,
+  iconClassName,
+  children,
+}: {
+  title: string
+  icon: typeof User
+  iconClassName: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="rounded-2xl border border-border bg-card p-6">
+      <div className="mb-5 flex items-center gap-3">
+        <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${iconClassName}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      </div>
+      {children}
+    </section>
+  )
+}
 
 export default function SettingsPage() {
-  const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
+  const { theme, resolvedTheme, mounted, setTheme } = useTheme()
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [clearing, setClearing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const activeThemeLabel = useMemo(() => {
+    if (!mounted) return 'Loading...'
+    if (theme === 'system') {
+      return `System (${resolvedTheme === 'dark' ? 'Dark' : 'Light'})`
+    }
+    return theme === 'dark' ? 'Dark' : 'Light'
+  }, [mounted, resolvedTheme, theme])
 
-  /* ---- Export all contacts as CSV ---- */
   const handleExportAll = async () => {
     setExporting(true)
+    setError(null)
+
     const { data, error } = await supabase
       .from('contacts')
       .select('*')
       .order('created_at', { ascending: false })
 
     if (error || !data) {
+      setError(formatDatabaseError(error, 'export contacts'))
       setExporting(false)
       return
     }
 
     const contacts = data as Contact[]
-    const headers = ['Name', 'Email', 'Phone', 'Company', 'Status', 'Deal Value', 'Last Contacted', 'Created At']
-    const escape = (v: string) => {
-      const s = String(v ?? '')
-      return s.includes(',') || s.includes('"') || s.includes('\n')
-        ? `"${s.replace(/"/g, '""')}"`
-        : s
-    }
-    const rows = contacts.map((c) =>
-      [c.name, c.email, c.phone, c.company, c.status, c.deal_value, c.last_contacted, c.created_at]
-        .map((v) => escape(String(v ?? '')))
+    const headers = [
+      'Name',
+      'Email',
+      'Phone',
+      'Company',
+      'Status',
+      'Deal Value',
+      'Last Contacted',
+      'Created At',
+    ]
+    const rows = contacts.map((contact) =>
+      [
+        contact.name,
+        contact.email,
+        contact.phone,
+        contact.company,
+        contact.status,
+        contact.deal_value,
+        contact.last_contacted,
+        contact.created_at,
+      ]
+        .map(escapeCsv)
         .join(',')
     )
+
     const csv = [headers.join(','), ...rows].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `nexcrm-all-contacts-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `nexcrm-all-contacts-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
     URL.revokeObjectURL(url)
     setExporting(false)
   }
 
-  /* ---- Clear all contacts ---- */
   const handleClearAll = async () => {
     setClearing(true)
-    // Delete all rows — Supabase requires a filter, so we use gte on id
-    await supabase.from('contacts').delete().gte('id', '00000000-0000-0000-0000-000000000000')
+    setError(null)
+
+    const { error } = await supabase
+      .from('contacts')
+      .delete()
+      .not('id', 'is', null)
+
+    if (error) {
+      setError(formatDatabaseError(error, 'clear all contacts'))
+    }
+
     setClearing(false)
   }
 
-  const themeOptions = [
-    { value: 'light', label: 'Light', icon: Sun },
-    { value: 'dark', label: 'Dark', icon: Moon },
-    { value: 'system', label: 'System', icon: Monitor },
-  ]
-
-  const cardClass = 'bg-card border border-border rounded-2xl p-6'
-  const sectionTitle = (icon: React.ReactNode, title: string) => (
-    <div className="flex items-center gap-3 mb-5">
-      {icon}
-      <h2 className="text-base font-semibold text-foreground">{title}</h2>
-    </div>
-  )
-
   return (
     <AppShell title="Settings">
-      <div className="max-w-2xl space-y-5 fade-in">
+      <div className="w-full max-w-full space-y-5">
+        {error && (
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-500">
+            {error}
+          </div>
+        )}
 
-        {/* ===== SECTION 1 — Profile ===== */}
-        <div className={cardClass}>
-          {sectionTitle(
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-              <User className="w-4 h-4 text-indigo-500" />
-            </div>,
-            'Profile'
-          )}
-
+        <SectionCard
+          title="Profile"
+          icon={User}
+          iconClassName="bg-indigo-500/10 text-indigo-500"
+        >
           <div className="space-y-4">
             {[
               { label: 'Display Name', value: 'CRM Admin', icon: User },
               { label: 'Email', value: 'admin@nexcrm.com', icon: Mail },
               { label: 'Role', value: 'Administrator', icon: Shield },
-            ].map((field) => {
-              const Icon = field.icon
+            ].map((item) => {
+              const Icon = item.icon
               return (
-                <div key={field.label} className="flex items-center gap-3 p-3 rounded-xl bg-muted/40">
-                  <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                    <Icon className="w-4 h-4 text-muted-foreground" />
+                <div
+                  key={item.label}
+                  className="flex items-center gap-3 rounded-xl bg-muted/40 p-3"
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-muted-foreground">{field.label}</p>
-                    <p className="text-sm font-medium text-foreground">{field.value}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground">{item.label}</p>
+                    <p className="text-sm font-medium text-foreground">{item.value}</p>
                   </div>
                 </div>
               )
             })}
           </div>
 
-          <div className="mt-5 pt-4 border-t border-border">
+          <div className="mt-5 border-t border-border pt-4">
             <button
               disabled
               title="Coming soon"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-sm font-medium text-muted-foreground cursor-not-allowed opacity-50"
+              className="inline-flex cursor-not-allowed items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-medium text-muted-foreground opacity-60"
             >
-              <Pencil className="w-4 h-4" />
+              <Pencil className="h-4 w-4" />
               Edit Profile
             </button>
           </div>
-        </div>
+        </SectionCard>
 
-        {/* ===== SECTION 2 — Appearance ===== */}
-        <div className={cardClass}>
-          {sectionTitle(
-            <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center">
-              <Palette className="w-4 h-4 text-purple-500" />
-            </div>,
-            'Appearance'
-          )}
+        <SectionCard
+          title="Appearance"
+          icon={Sun}
+          iconClassName="bg-purple-500/10 text-purple-500"
+        >
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {mounted &&
+                THEME_OPTIONS.map((option) => {
+                  const Icon = option.icon
+                  const isSelected = theme === option.value
 
-          {mounted && (
-            <div className="grid grid-cols-3 gap-3">
-              {themeOptions.map((opt) => {
-                const Icon = opt.icon
-                const isActive = theme === opt.value
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => setTheme(opt.value)}
-                    className={`
-                      relative flex flex-col items-center gap-2 p-4 rounded-xl border text-sm font-medium transition-all duration-200
-                      ${isActive
-                        ? 'border-primary bg-primary/5 text-foreground shadow-sm'
-                        : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
-                      }
-                    `}
-                  >
-                    {isActive && (
-                      <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                        <Check className="w-3 h-3 text-primary-foreground" />
+                  return (
+                    <button
+                      key={option.value}
+                      onClick={() => setTheme(option.value)}
+                      className={`relative flex items-center justify-between rounded-xl border p-4 text-left transition-all ${
+                        isSelected
+                          ? 'border-primary bg-primary/5 text-foreground shadow-sm'
+                          : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <span className="text-sm font-medium">{option.label}</span>
                       </div>
-                    )}
-                    <Icon className="w-5 h-5" />
-                    <span>{opt.label}</span>
-                  </button>
-                )
-              })}
+                      {isSelected && (
+                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                          <Check className="h-3 w-3" />
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
             </div>
-          )}
-        </div>
 
-        {/* ===== SECTION 3 — Data Management ===== */}
-        <div className={cardClass}>
-          {sectionTitle(
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-              <Database className="w-4 h-4 text-emerald-500" />
-            </div>,
-            'Data'
-          )}
+            <div className="rounded-xl border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+              Active theme:{' '}
+              <span className="font-medium text-foreground">{activeThemeLabel}</span>
+            </div>
+          </div>
+        </SectionCard>
 
+        <SectionCard
+          title="Data"
+          icon={Database}
+          iconClassName="bg-emerald-500/10 text-emerald-500"
+        >
           <div className="space-y-3">
-            {/* Export */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-muted/40">
+            <div className="flex flex-col gap-4 rounded-xl bg-muted/40 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-medium text-foreground">Export All Contacts</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Download every contact as a CSV file</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Download every contact as a CSV file.
+                </p>
               </div>
               <button
                 onClick={handleExportAll}
                 disabled={exporting}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-muted transition-colors disabled:opacity-50 active:scale-95"
+                className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
               >
-                <Download className="w-4 h-4" />
+                <Download className="h-4 w-4" />
                 {exporting ? 'Exporting...' : 'Export CSV'}
               </button>
             </div>
 
-            {/* Clear */}
-            <div className="flex items-center justify-between p-3.5 rounded-xl bg-red-500/5 border border-red-500/10">
+            <div className="flex flex-col gap-4 rounded-xl border border-red-500/10 bg-red-500/5 p-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-medium text-foreground">Clear All Contacts</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Permanently delete every contact from the database</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Permanently delete every contact from the database.
+                </p>
               </div>
               <button
                 onClick={() => setConfirmOpen(true)}
                 disabled={clearing}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-destructive hover:bg-red-600 text-white text-sm font-medium transition-colors disabled:opacity-50 active:scale-95"
+                className="inline-flex items-center gap-2 rounded-xl bg-destructive px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="h-4 w-4" />
                 {clearing ? 'Clearing...' : 'Clear All'}
               </button>
             </div>
           </div>
-        </div>
+        </SectionCard>
 
-        {/* ===== SECTION 4 — About ===== */}
-        <div className={cardClass}>
-          {sectionTitle(
-            <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center">
-              <Info className="w-4 h-4 text-amber-500" />
-            </div>,
-            'About NexCRM'
-          )}
-
+        <SectionCard
+          title="About NexCRM"
+          icon={Info}
+          iconClassName="bg-amber-500/10 text-amber-500"
+        >
           <div className="space-y-3">
-            {[
-              { label: 'Version', value: '1.0.0' },
-              { label: 'Framework', value: 'Next.js 16 (App Router)' },
-              { label: 'Database', value: 'Supabase (PostgreSQL)' },
-              { label: 'Styling', value: 'Tailwind CSS v4' },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{item.label}</span>
-                <span className="font-medium text-foreground">{item.value}</span>
-              </div>
-            ))}
+            <div className="flex items-center justify-between gap-4 text-sm">
+              <span className="text-muted-foreground">Version</span>
+              <span className="font-medium text-foreground">1.0.0</span>
+            </div>
+            <div className="rounded-xl bg-muted/40 p-4 text-sm text-muted-foreground">
+              Built with Next.js 16 + Supabase + Tailwind CSS v4
+            </div>
           </div>
 
-          <div className="mt-5 pt-4 border-t border-border flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-foreground">NexCRM</p>
-              <p className="text-xs text-muted-foreground">Modern CRM Dashboard</p>
-            </div>
+          <div className="mt-5 border-t border-border pt-4">
             <a
               href="https://github.com/Shashidhar-Pawadashetti/crm-dashboard"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:bg-muted transition-colors active:scale-95"
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted active:scale-95"
             >
-              <ExternalLink className="w-4 h-4" />
+              <ExternalLink className="h-4 w-4" />
               View on GitHub
             </a>
           </div>
-        </div>
-
+        </SectionCard>
       </div>
 
-      {/* Confirm clear dialog */}
       <ConfirmDialog
         isOpen={confirmOpen}
         onClose={() => setConfirmOpen(false)}
         onConfirm={handleClearAll}
         title="Clear All Contacts"
-        message="This will permanently delete ALL contacts from your database. This action cannot be undone. Are you sure?"
+        message="This will permanently delete all contacts from the database. This action cannot be undone."
       />
     </AppShell>
   )

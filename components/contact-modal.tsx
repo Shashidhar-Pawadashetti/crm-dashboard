@@ -9,6 +9,7 @@ interface ContactModalProps {
   onClose: () => void
   onSubmit: (contact: Omit<Contact, 'id' | 'created_at'>) => Promise<void>
   editingContact?: Contact | null
+  onError?: (message: string) => void
 }
 
 export default function ContactModal({
@@ -16,6 +17,7 @@ export default function ContactModal({
   onClose,
   onSubmit,
   editingContact,
+  onError,
 }: ContactModalProps) {
   const [formData, setFormData] = useState({
     name: '',
@@ -27,30 +29,37 @@ export default function ContactModal({
     last_contacted: '',
   })
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (editingContact) {
-      setFormData({
-        name: editingContact.name,
-        email: editingContact.email,
-        phone: editingContact.phone,
-        company: editingContact.company,
-        status: editingContact.status,
-        deal_value: String(editingContact.deal_value),
-        last_contacted: editingContact.last_contacted
-          ? editingContact.last_contacted.split('T')[0]
-          : '',
-      })
-    } else {
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        company: '',
-        status: 'Lead',
-        deal_value: '',
-        last_contacted: new Date().toISOString().split('T')[0],
-      })
+    const timeoutId = window.setTimeout(() => {
+      if (editingContact) {
+        setFormData({
+          name: editingContact.name,
+          email: editingContact.email,
+          phone: editingContact.phone,
+          company: editingContact.company,
+          status: editingContact.status,
+          deal_value: String(editingContact.deal_value),
+          last_contacted: editingContact.last_contacted
+            ? editingContact.last_contacted.split('T')[0]
+            : '',
+        })
+      } else {
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          company: '',
+          status: 'Lead',
+          deal_value: '',
+          last_contacted: new Date().toISOString().split('T')[0],
+        })
+      }
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timeoutId)
     }
   }, [editingContact, isOpen])
 
@@ -59,6 +68,7 @@ export default function ContactModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
+    setSubmitError(null)
     try {
       await onSubmit({
         name: formData.name,
@@ -70,8 +80,11 @@ export default function ContactModal({
         last_contacted: formData.last_contacted,
       })
       onClose()
-    } catch {
-      // Error is handled by the parent
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to save contact. Please try again.'
+      setSubmitError(message)
+      onError?.(message)
     } finally {
       setSubmitting(false)
     }
@@ -107,6 +120,12 @@ export default function ContactModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {submitError && (
+            <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-500">
+              {submitError}
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label htmlFor="contact-name" className={labelClasses}>

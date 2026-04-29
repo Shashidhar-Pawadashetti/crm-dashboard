@@ -1,95 +1,89 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '@/components/app-shell'
 import { supabase } from '@/lib/supabase'
 import type { Contact } from '@/lib/types'
-import { IndianRupee } from 'lucide-react'
+import { formatDatabaseError } from '@/lib/db-error'
 
 type Status = Contact['status']
 
-const columns: {
+type PipelineColumn = {
   status: Status
-  label: string
-  color: string
-  bgLight: string
-  badgeBg: string
-  badgeText: string
-  borderAccent: string
-}[] = [
+  headerClassName: string
+  badgeClassName: string
+  dealBadgeClassName: string
+}
+
+const PIPELINE_COLUMNS: PipelineColumn[] = [
   {
     status: 'Lead',
-    label: 'Lead',
-    color: 'text-blue-600 dark:text-blue-400',
-    bgLight: 'bg-blue-500/10',
-    badgeBg: 'bg-blue-500/10 border-blue-500/20',
-    badgeText: 'text-blue-600 dark:text-blue-400',
-    borderAccent: 'border-t-blue-500',
+    headerClassName: 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400',
+    badgeClassName: 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400',
+    dealBadgeClassName: 'border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400',
   },
   {
     status: 'Active',
-    label: 'Active',
-    color: 'text-emerald-600 dark:text-emerald-400',
-    bgLight: 'bg-emerald-500/10',
-    badgeBg: 'bg-emerald-500/10 border-emerald-500/20',
-    badgeText: 'text-emerald-600 dark:text-emerald-400',
-    borderAccent: 'border-t-emerald-500',
+    headerClassName:
+      'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    badgeClassName:
+      'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    dealBadgeClassName:
+      'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
   },
   {
     status: 'Inactive',
-    label: 'Inactive',
-    color: 'text-slate-500 dark:text-slate-400',
-    bgLight: 'bg-slate-500/10',
-    badgeBg: 'bg-slate-500/10 border-slate-500/20',
-    badgeText: 'text-slate-600 dark:text-slate-400',
-    borderAccent: 'border-t-slate-400',
+    headerClassName: 'border-slate-500/20 bg-slate-500/10 text-slate-600 dark:text-slate-400',
+    badgeClassName: 'border-slate-500/20 bg-slate-500/10 text-slate-600 dark:text-slate-400',
+    dealBadgeClassName: 'border-slate-500/20 bg-slate-500/10 text-slate-600 dark:text-slate-400',
   },
   {
     status: 'Churned',
-    label: 'Churned',
-    color: 'text-red-600 dark:text-red-400',
-    bgLight: 'bg-red-500/10',
-    badgeBg: 'bg-red-500/10 border-red-500/20',
-    badgeText: 'text-red-600 dark:text-red-400',
-    borderAccent: 'border-t-red-500',
+    headerClassName: 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400',
+    badgeClassName: 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400',
+    dealBadgeClassName: 'border-red-500/20 bg-red-500/10 text-red-600 dark:text-red-400',
   },
 ]
 
 function formatCurrency(value: number): string {
-  if (value >= 10000000) return '₹' + (value / 10000000).toFixed(1) + 'Cr'
-  if (value >= 100000) return '₹' + (value / 100000).toFixed(1) + 'L'
-  if (value >= 1000) return '₹' + (value / 1000).toFixed(1) + 'K'
-  return '₹' + value.toLocaleString('en-IN')
+  return `\u20B9${value.toLocaleString('en-IN')}`
 }
 
-function SkeletonCard({ i }: { i: number }) {
+function SkeletonCard({ index }: { index: number }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-3">
-      <div className="skeleton h-4 rounded mb-2" style={{ width: `${65 + (i * 13) % 30}%` }} />
-      <div className="skeleton h-3 rounded mb-3" style={{ width: `${45 + (i * 17) % 35}%` }} />
+    <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+      <div
+        className="skeleton mb-2 h-4 rounded"
+        style={{ width: `${58 + ((index * 11) % 25)}%` }}
+      />
+      <div
+        className="skeleton mb-4 h-3 rounded"
+        style={{ width: `${42 + ((index * 17) % 30)}%` }}
+      />
       <div className="flex justify-end">
-        <div className="skeleton h-5 w-16 rounded-lg" />
+        <div className="skeleton h-6 w-20 rounded-lg" />
       </div>
     </div>
   )
 }
 
-function SkeletonColumn({ col }: { col: number }) {
+function SkeletonColumn({ status, index }: { status: Status; index: number }) {
   return (
-    <div className="min-w-[260px] flex-1 flex flex-col">
-      <div className="bg-card border border-border rounded-2xl border-t-[3px] border-t-muted p-4">
-        <div className="flex items-center justify-between mb-1">
+    <section className="w-[280px] shrink-0 rounded-2xl border border-border bg-muted/20 p-4 sm:w-[300px] lg:w-full min-w-[280px]">
+      <div className="mb-4 rounded-xl border border-border bg-card p-4">
+        <div className="mb-2 flex items-center justify-between gap-3">
           <div className="skeleton h-5 w-20 rounded" />
-          <div className="skeleton h-5 w-7 rounded-lg" />
+          <div className="skeleton h-6 w-8 rounded-full" />
         </div>
-        <div className="skeleton h-3 w-24 rounded mb-4" />
-        <div className="space-y-2.5">
-          {[...Array(2 + col)].map((_, i) => (
-            <SkeletonCard key={i} i={i + col * 3} />
-          ))}
-        </div>
+        <div className="skeleton h-3 w-28 rounded" />
       </div>
-    </div>
+
+      <div className="space-y-3">
+        {[0, 1 + (index % 2)].map((offset) => (
+          <SkeletonCard key={`${status}-${offset}`} index={index * 3 + offset} />
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -101,24 +95,32 @@ export default function PipelinePage() {
   const fetchContacts = useCallback(async () => {
     setLoading(true)
     setError(null)
+
     const { data, error } = await supabase
       .from('contacts')
       .select('*')
       .order('created_at', { ascending: false })
 
     if (error) {
-      setError(error.message)
+      setError(formatDatabaseError(error, 'load pipeline data'))
+      setContacts([])
     } else if (data) {
       setContacts(data as Contact[])
     }
+
     setLoading(false)
   }, [])
 
   useEffect(() => {
-    fetchContacts()
+    const timeoutId = window.setTimeout(() => {
+      void fetchContacts()
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
   }, [fetchContacts])
 
-  // Real-time sync
   useEffect(() => {
     const channel = supabase
       .channel('pipeline-realtime')
@@ -127,7 +129,10 @@ export default function PipelinePage() {
         { event: 'INSERT', schema: 'public', table: 'contacts' },
         (payload) => {
           setContacts((prev) => {
-            if (prev.some((c) => c.id === (payload.new as Contact).id)) return prev
+            if (prev.some((contact) => contact.id === (payload.new as Contact).id)) {
+              return prev
+            }
+
             return [payload.new as Contact, ...prev]
           })
         }
@@ -137,8 +142,10 @@ export default function PipelinePage() {
         { event: 'UPDATE', schema: 'public', table: 'contacts' },
         (payload) => {
           setContacts((prev) =>
-            prev.map((c) =>
-              c.id === (payload.new as Contact).id ? (payload.new as Contact) : c
+            prev.map((contact) =>
+              contact.id === (payload.new as Contact).id
+                ? (payload.new as Contact)
+                : contact
             )
           )
         }
@@ -148,7 +155,7 @@ export default function PipelinePage() {
         { event: 'DELETE', schema: 'public', table: 'contacts' },
         (payload) => {
           setContacts((prev) =>
-            prev.filter((c) => c.id !== (payload.old as Contact).id)
+            prev.filter((contact) => contact.id !== (payload.old as Contact).id)
           )
         }
       )
@@ -159,110 +166,102 @@ export default function PipelinePage() {
     }
   }, [])
 
-  const grouped = useMemo(() => {
-    const map: Record<Status, Contact[]> = {
+  const groupedContacts = useMemo(() => {
+    const grouped: Record<Status, Contact[]> = {
       Lead: [],
       Active: [],
       Inactive: [],
       Churned: [],
     }
-    for (const c of contacts) {
-      if (map[c.status]) map[c.status].push(c)
+
+    for (const contact of contacts) {
+      grouped[contact.status].push(contact)
     }
-    return map
+
+    return grouped
   }, [contacts])
 
   return (
     <AppShell title="Pipeline">
-      {/* Error banner */}
-      {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-4 flex items-start gap-3 fade-in">
-          <div className="shrink-0 w-5 h-5 mt-0.5 text-destructive">⚠</div>
-          <div>
-            <p className="text-sm font-medium text-destructive">Supabase error: {error}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Check your .env.local file has the correct NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.
-            </p>
+      <div className="w-full max-w-full space-y-4">
+        {error && (
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-500">
+            {error}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Pipeline columns */}
-      {loading ? (
-        <div className="flex gap-4 overflow-x-auto pb-4 -mx-1 px-1">
-          {[0, 1, 2, 3].map((col) => (
-            <SkeletonColumn key={col} col={col} />
-          ))}
-        </div>
-      ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4 -mx-1 px-1">
-          {columns.map((col) => {
-            const items = grouped[col.status]
-            const totalValue = items.reduce(
-              (sum, c) => sum + (Number(c.deal_value) || 0),
-              0
-            )
+        <div className="-mx-1 overflow-x-auto px-1 pb-2">
+          <div className="grid min-w-max grid-flow-col gap-4 lg:min-w-0 lg:grid-cols-4 lg:grid-flow-row lg:gap-6 w-full">
+            {loading
+              ? PIPELINE_COLUMNS.map((column, index) => (
+                  <SkeletonColumn
+                    key={column.status}
+                    status={column.status}
+                    index={index}
+                  />
+                ))
+              : PIPELINE_COLUMNS.map((column) => {
+                  const items = groupedContacts[column.status]
+                  const totalValue = items.reduce(
+                    (sum, contact) => sum + (Number(contact.deal_value) || 0),
+                    0
+                  )
 
-            return (
-              <div key={col.status} className="min-w-[260px] flex-1 flex flex-col">
-                <div
-                  className={`bg-card border border-border rounded-2xl border-t-[3px] ${col.borderAccent} p-4 flex flex-col h-full`}
-                >
-                  {/* Column header */}
-                  <div className="flex items-center justify-between mb-0.5">
-                    <h3 className={`text-sm font-semibold ${col.color}`}>
-                      {col.label}
-                    </h3>
-                    <span
-                      className={`text-xs font-semibold px-2 py-0.5 rounded-lg border ${col.badgeBg} ${col.badgeText}`}
+                  return (
+                    <section
+                      key={column.status}
+                      className="flex w-[280px] shrink-0 flex-col rounded-2xl border border-border bg-muted/20 p-4 sm:w-[300px] lg:w-full min-w-[280px]"
                     >
-                      {items.length}
-                    </span>
-                  </div>
-
-                  {/* Column total */}
-                  <p className="text-xs text-muted-foreground mb-4 flex items-center gap-1">
-                    <IndianRupee className="w-3 h-3" />
-                    {formatCurrency(totalValue)} total
-                  </p>
-
-                  {/* Cards */}
-                  <div className="space-y-2.5 flex-1">
-                    {items.length === 0 ? (
-                      <div className="border-2 border-dashed border-border rounded-xl p-4 text-center">
-                        <p className="text-xs text-muted-foreground">
-                          No {col.label.toLowerCase()} contacts
+                      <div
+                        className={`mb-4 rounded-xl border px-4 py-3 ${column.headerClassName}`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <h2 className="text-sm font-semibold">{column.status}</h2>
+                          <span
+                            className={`inline-flex min-w-8 items-center justify-center rounded-full border px-2 py-0.5 text-xs font-semibold ${column.badgeClassName}`}
+                          >
+                            {items.length}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {formatCurrency(totalValue)} total
                         </p>
                       </div>
-                    ) : (
-                      items.map((contact) => (
-                        <div
-                          key={contact.id}
-                          className="bg-card border border-border rounded-xl p-3 hover:shadow-md hover:shadow-black/5 dark:hover:shadow-black/20 transition-all duration-200 cursor-default group"
-                        >
-                          <p className="text-sm font-semibold text-foreground truncate">
-                            {contact.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate mt-0.5">
-                            {contact.company || 'No company'}
-                          </p>
-                          <div className="flex justify-end mt-2.5">
-                            <span
-                              className={`inline-flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-lg border ${col.badgeBg} ${col.badgeText}`}
-                            >
-                              {formatCurrency(Number(contact.deal_value) || 0)}
-                            </span>
+
+                      <div className="space-y-3">
+                        {items.length === 0 ? (
+                          <div className="rounded-xl border border-dashed border-border bg-card/60 p-4 text-center text-sm text-muted-foreground">
+                            No {column.status.toLowerCase()} contacts
                           </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
+                        ) : (
+                          items.map((contact) => (
+                            <article
+                              key={contact.id}
+                              className="rounded-xl border border-border bg-card p-3 shadow-sm transition hover:shadow-md"
+                            >
+                              <p className="truncate text-sm font-semibold text-foreground">
+                                {contact.name}
+                              </p>
+                              <p className="mt-1 truncate text-sm text-muted-foreground">
+                                {contact.company || 'No company'}
+                              </p>
+                              <div className="mt-3 flex justify-end">
+                                <span
+                                  className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-semibold ${column.dealBadgeClassName}`}
+                                >
+                                  {formatCurrency(Number(contact.deal_value) || 0)}
+                                </span>
+                              </div>
+                            </article>
+                          ))
+                        )}
+                      </div>
+                    </section>
+                  )
+                })}
+          </div>
         </div>
-      )}
+      </div>
     </AppShell>
   )
 }
