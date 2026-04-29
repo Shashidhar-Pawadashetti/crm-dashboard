@@ -10,25 +10,27 @@ const BAR_HEIGHTS = [40, 65, 45, 80, 55, 90, 70, 85, 60, 75, 95, 50]
 export default function DashboardPage() {
   return (
     <AppShell title="Dashboard">
-      <div className="w-full max-w-full space-y-6">
+      <div className="w-full space-y-6">
         <DashboardCards />
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 w-full">
+        <div className="grid w-full grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
           {/* Sales Overview */}
-          <div className="fade-in lg:col-span-2 rounded-2xl border border-border bg-card p-6">
-            <div className="mb-6 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10">
+          <div className="fade-in rounded-2xl border border-border bg-card p-5 sm:p-6 lg:col-span-2">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10">
                   <BarChart3 className="h-4 w-4 text-indigo-500" />
                 </div>
-                <h2 className="text-base font-semibold text-foreground">Sales Overview</h2>
+                <h2 className="truncate text-base font-semibold text-foreground">
+                  Sales Overview
+                </h2>
               </div>
-              <span className="text-xs text-muted-foreground">This month</span>
+              <span className="shrink-0 text-xs text-muted-foreground">This month</span>
             </div>
 
             <div className="space-y-3">
               {/* Chart bars */}
-              <div className="flex h-44 items-end gap-1.5 px-1">
+              <div className="flex h-40 items-end gap-1.5 sm:h-44">
                 {BAR_HEIGHTS.map((h, i) => (
                   <div
                     key={MONTHS[i]}
@@ -40,7 +42,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Month labels */}
-              <div className="flex gap-1.5 px-1">
+              <div className="flex gap-1.5">
                 {MONTHS.map((m) => (
                   <div
                     key={m}
@@ -52,12 +54,15 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="mt-5 flex items-center gap-4 border-t border-border pt-4">
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
               <div className="flex items-center gap-1.5 text-sm">
                 <TrendingUp className="h-4 w-4 text-emerald-500" />
-                <span className="font-medium text-emerald-600 dark:text-emerald-400">+12.5%</span>
+                <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                  +12.5%
+                </span>
                 <span className="text-muted-foreground">vs last month</span>
               </div>
+              <span className="text-xs text-muted-foreground">Last 12 months</span>
             </div>
           </div>
 

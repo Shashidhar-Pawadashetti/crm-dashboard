@@ -9,6 +9,7 @@ import ConfirmDialog from './confirm-dialog'
 import {
   Search,
   Filter,
+  ChevronDown,
   Pencil,
   Trash2,
   Users,
@@ -249,9 +250,9 @@ export default function ContactsTable({
 
   return (
     <>
-      <div className="mb-5 flex flex-col items-start gap-3 fade-in sm:flex-row sm:items-center w-full">
-        <div className="relative w-full flex-1 sm:max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="fade-in mb-5 flex w-full flex-wrap items-center gap-3">
+        <div className="relative w-full flex-1 sm:min-w-[240px] sm:max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             id="contact-search"
             type="text"
@@ -263,12 +264,12 @@ export default function ContactsTable({
         </div>
 
         <div className="relative">
-          <Filter className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <select
             id="status-filter"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="cursor-pointer appearance-none rounded-xl border border-border bg-card py-2.5 pl-10 pr-8 text-sm text-foreground transition-all focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30"
+            className="cursor-pointer appearance-none rounded-xl border border-border bg-card py-2.5 pl-10 pr-9 text-sm text-foreground transition-all focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30"
           >
             <option value="All">All Status</option>
             <option value="Lead">Lead</option>
@@ -276,6 +277,7 @@ export default function ContactsTable({
             <option value="Inactive">Inactive</option>
             <option value="Churned">Churned</option>
           </select>
+          <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         </div>
 
         <button
@@ -324,13 +326,13 @@ export default function ContactsTable({
             URL.revokeObjectURL(url)
           }}
           disabled={filteredContacts.length === 0}
-          className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 active:scale-95"
+          className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40 active:scale-95"
         >
           <Download className="h-4 w-4" />
           <span className="hidden sm:inline">Export CSV</span>
         </button>
 
-        <div className="ml-auto text-sm text-muted-foreground">
+        <div className="order-last ml-auto w-full text-sm text-muted-foreground sm:order-none sm:w-auto sm:text-right">
           Showing{' '}
           <span className="font-semibold text-foreground">
             {filteredContacts.length}
@@ -479,7 +481,7 @@ export default function ContactsTable({
                       {formatDate(contact.last_contacted)}
                     </td>
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <div className="flex items-center gap-1 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                         <button
                           onClick={() => {
                             setEditingContact(contact)

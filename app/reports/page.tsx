@@ -282,15 +282,22 @@ export default function ReportsPage() {
 
   return (
     <AppShell title="Reports">
-      <div className="w-full max-w-full space-y-5">
-        <div className="flex justify-end">
+      <div className="w-full space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-foreground">Pipeline analytics</p>
+            <p className="text-xs text-muted-foreground">
+              Insights across status, top deals, and recent activity.
+            </p>
+          </div>
           <button
             onClick={handleExport}
             disabled={loading || contacts.length === 0}
             className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2.5 text-sm font-medium text-white shadow-lg shadow-indigo-500/20 transition-all hover:from-indigo-600 hover:to-purple-700 hover:shadow-indigo-500/35 disabled:cursor-not-allowed disabled:opacity-50 active:scale-95"
           >
             <Download className="h-4 w-4" />
-            Export Report
+            <span className="hidden sm:inline">Export Report</span>
+            <span className="sm:hidden">Export</span>
           </button>
         </div>
 
@@ -330,11 +337,13 @@ export default function ReportsPage() {
 
                     return (
                       <div key={status} className="flex items-center gap-3">
-                        <div className="flex w-24 shrink-0 items-center justify-between gap-2">
+                        <div className="flex w-20 shrink-0 items-center justify-between gap-2 sm:w-24">
                           <span className={`text-sm font-medium ${meta.textClassName}`}>
                             {status}
                           </span>
-                          <span className="text-xs text-muted-foreground">{count}</span>
+                          <span className="text-xs tabular-nums text-muted-foreground">
+                            {count}
+                          </span>
                         </div>
                         <div className="h-7 flex-1 overflow-hidden rounded-lg bg-muted">
                           <div
@@ -425,15 +434,17 @@ export default function ReportsPage() {
                       key={stat.label}
                       className="rounded-xl border border-border bg-muted/40 p-4"
                     >
-                      <p className="text-xs text-muted-foreground">{stat.label}</p>
-                      <div className="mt-2 flex items-center justify-between gap-3">
-                        <p className="text-sm font-semibold text-foreground">{stat.value}</p>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-xs text-muted-foreground">{stat.label}</p>
                         <span
-                          className={`inline-flex rounded-lg border px-2 py-1 text-[11px] font-semibold ${stat.badgeClassName}`}
+                          className={`inline-flex shrink-0 rounded-lg border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${stat.badgeClassName}`}
                         >
                           Live
                         </span>
                       </div>
+                      <p className="mt-2 text-base font-semibold tabular-nums text-foreground">
+                        {stat.value}
+                      </p>
                     </div>
                   ))}
                 </div>

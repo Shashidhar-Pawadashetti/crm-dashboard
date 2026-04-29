@@ -19,15 +19,15 @@ export default function AppShell({
     <div className="min-h-screen bg-background">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="relative min-h-screen flex flex-col lg:ml-[240px]">
+      <div className="relative flex min-h-screen flex-col lg:ml-[240px]">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-primary/10 to-transparent" />
         <Header
           title={title}
           onAddContact={onAddContact}
           onToggleSidebar={() => setSidebarOpen(true)}
         />
-        <main className="relative z-10 flex-1 p-4 sm:p-6 lg:p-8">
-          <div className="page-enter w-full max-w-full mx-auto">{children}</div>
+        <main className="relative z-10 flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+          <div className="page-enter mx-auto w-full max-w-[1440px]">{children}</div>
         </main>
       </div>
     </div>
