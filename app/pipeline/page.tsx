@@ -69,7 +69,7 @@ function SkeletonCard({ index }: { index: number }) {
 
 function SkeletonColumn({ status, index }: { status: Status; index: number }) {
   return (
-    <section className="w-[280px] shrink-0 rounded-2xl border border-border bg-muted/20 p-4 sm:w-[300px] lg:w-full min-w-[280px]">
+    <section className="w-[280px] min-w-[280px] shrink-0 rounded-2xl border border-border bg-muted/20 p-4 sm:w-[300px] md:w-full md:min-w-0 md:shrink">
       <div className="mb-4 rounded-xl border border-border bg-card p-4">
         <div className="mb-2 flex items-center justify-between gap-3">
           <div className="skeleton h-5 w-20 rounded" />
@@ -183,15 +183,15 @@ export default function PipelinePage() {
 
   return (
     <AppShell title="Pipeline">
-      <div className="w-full max-w-full space-y-4">
+      <div className="w-full space-y-4">
         {error && (
           <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-500">
             {error}
           </div>
         )}
 
-        <div className="-mx-1 overflow-x-auto px-1 pb-2">
-          <div className="grid min-w-max grid-flow-col gap-4 lg:min-w-0 lg:grid-cols-4 lg:grid-flow-row lg:gap-6 w-full">
+        <div className="-mx-1 overflow-x-auto px-1 pb-2 md:mx-0 md:overflow-visible md:px-0">
+          <div className="grid w-full min-w-max grid-flow-col gap-4 md:min-w-0 md:grid-flow-row md:grid-cols-2 md:gap-5 lg:grid-cols-4 lg:gap-6">
             {loading
               ? PIPELINE_COLUMNS.map((column, index) => (
                   <SkeletonColumn
@@ -210,7 +210,7 @@ export default function PipelinePage() {
                   return (
                     <section
                       key={column.status}
-                      className="flex w-[280px] shrink-0 flex-col rounded-2xl border border-border bg-muted/20 p-4 sm:w-[300px] lg:w-full min-w-[280px]"
+                      className="flex w-[280px] min-w-[280px] shrink-0 flex-col rounded-2xl border border-border bg-muted/20 p-4 sm:w-[300px] md:w-full md:min-w-0 md:shrink"
                     >
                       <div
                         className={`mb-4 rounded-xl border px-4 py-3 ${column.headerClassName}`}
@@ -237,17 +237,17 @@ export default function PipelinePage() {
                           items.map((contact) => (
                             <article
                               key={contact.id}
-                              className="rounded-xl border border-border bg-card p-3 shadow-sm transition hover:shadow-md"
+                              className="rounded-xl border border-border bg-card p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
                             >
                               <p className="truncate text-sm font-semibold text-foreground">
                                 {contact.name}
                               </p>
-                              <p className="mt-1 truncate text-sm text-muted-foreground">
+                              <p className="mt-1 truncate text-xs text-muted-foreground">
                                 {contact.company || 'No company'}
                               </p>
-                              <div className="mt-3 flex justify-end">
+                              <div className="mt-3 flex items-center justify-end">
                                 <span
-                                  className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-semibold ${column.dealBadgeClassName}`}
+                                  className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-semibold tabular-nums ${column.dealBadgeClassName}`}
                                 >
                                   {formatCurrency(Number(contact.deal_value) || 0)}
                                 </span>

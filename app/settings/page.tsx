@@ -153,7 +153,7 @@ export default function SettingsPage() {
 
   return (
     <AppShell title="Settings">
-      <div className="w-full max-w-full space-y-5">
+      <div className="w-full space-y-5">
         {error && (
           <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-500">
             {error}
@@ -217,20 +217,21 @@ export default function SettingsPage() {
                     <button
                       key={option.value}
                       onClick={() => setTheme(option.value)}
-                      className={`relative flex items-center justify-between rounded-xl border p-4 text-left transition-all ${
+                      aria-pressed={isSelected}
+                      className={`relative flex items-center justify-between gap-3 rounded-xl border p-3.5 text-left transition-all sm:p-4 ${
                         isSelected
                           ? 'border-primary bg-primary/5 text-foreground shadow-sm'
                           : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
                       }`}
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-muted">
                           <Icon className="h-4 w-4" />
                         </div>
-                        <span className="text-sm font-medium">{option.label}</span>
+                        <span className="truncate text-sm font-medium">{option.label}</span>
                       </div>
                       {isSelected && (
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
                           <Check className="h-3 w-3" />
                         </span>
                       )}

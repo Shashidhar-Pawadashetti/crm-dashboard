@@ -111,7 +111,7 @@ export default function DashboardCards() {
 
   if (loading) {
     return (
-      <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4 w-full">
+      <div className="mb-6 grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
         {[...Array(4)].map((_, i) => (
           <SkeletonCard key={i} />
         ))}
@@ -120,7 +120,7 @@ export default function DashboardCards() {
   }
 
   return (
-    <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4 w-full">
+    <div className="mb-6 grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
       {cards.map((card, index) => {
         const Icon = card.icon
         const value = data ? data[card.key] : 0

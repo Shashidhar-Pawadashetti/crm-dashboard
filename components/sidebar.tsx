@@ -41,13 +41,11 @@ export default function Sidebar({
 
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full w-[240px]
-          bg-sidebar/95 backdrop-blur-xl flex flex-col
+          fixed left-0 top-0 z-50 flex h-full w-[240px] min-w-[240px] flex-col
+          border-r border-white/5 bg-sidebar/95 backdrop-blur-xl
           transition-transform duration-300 ease-in-out
-          border-r border-white/5
           lg:translate-x-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-          min-w-[240px]
         `}
       >
         {/* Logo area */}
