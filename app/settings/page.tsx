@@ -21,7 +21,10 @@ import ConfirmDialog from '@/components/confirm-dialog'
 import { useTheme } from '@/components/theme-provider'
 import { supabase } from '@/lib/supabase'
 import type { Contact } from '@/lib/types'
-import { formatDatabaseError } from '@/lib/db-error'
+import {
+  formatDatabaseError,
+  formatSupabaseConfigurationError,
+} from '@/lib/db-error'
 
 type ThemeOption = 'light' | 'dark' | 'system'
 
@@ -86,6 +89,11 @@ export default function SettingsPage() {
   const handleExportAll = async () => {
     setExporting(true)
     setError(null)
+    if (!supabase) {
+      setError(formatSupabaseConfigurationError('export contacts'))
+      setExporting(false)
+      return
+    }
 
     const { data, error } = await supabase
       .from('contacts')
@@ -138,6 +146,11 @@ export default function SettingsPage() {
   const handleClearAll = async () => {
     setClearing(true)
     setError(null)
+    if (!supabase) {
+      setError(formatSupabaseConfigurationError('clear all contacts'))
+      setClearing(false)
+      return
+    }
 
     const { error } = await supabase
       .from('contacts')

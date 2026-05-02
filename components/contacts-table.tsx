@@ -3,7 +3,10 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Contact } from '@/lib/types'
-import { formatDatabaseError } from '@/lib/db-error'
+import {
+  formatDatabaseError,
+  formatSupabaseConfigurationError,
+} from '@/lib/db-error'
 import ContactModal from './contact-modal'
 import ConfirmDialog from './confirm-dialog'
 import {
@@ -97,6 +100,12 @@ export default function ContactsTable({
   const fetchContacts = useCallback(async () => {
     setLoading(true)
     setError(null)
+    if (!supabase) {
+      setError(formatSupabaseConfigurationError('load contacts'))
+      setContacts([])
+      setLoading(false)
+      return
+    }
 
     const { data, error } = await supabase
       .from('contacts')
@@ -124,7 +133,9 @@ export default function ContactsTable({
   }, [fetchContacts])
 
   useEffect(() => {
-    const channel = supabase
+    if (!supabase) return
+    const supabaseClient = supabase
+    const channel = supabaseClient
       .channel('contacts-realtime')
       .on(
         'postgres_changes',
@@ -161,7 +172,7 @@ export default function ContactsTable({
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      supabaseClient.removeChannel(channel)
     }
   }, [])
 
@@ -207,6 +218,9 @@ export default function ContactsTable({
   const handleAddContact = async (
     contact: Omit<Contact, 'id' | 'created_at'>
   ) => {
+    if (!supabase) {
+      throw new Error(formatSupabaseConfigurationError('add contact'))
+    }
     setMutationError(null)
     const { error } = await supabase.from('contacts').insert([contact])
     if (error) throw new Error(formatDatabaseError(error, 'add contact'))
@@ -217,6 +231,9 @@ export default function ContactsTable({
     contact: Omit<Contact, 'id' | 'created_at'>
   ) => {
     if (!editingContact) return
+    if (!supabase) {
+      throw new Error(formatSupabaseConfigurationError('update contact'))
+    }
 
     setMutationError(null)
     const { error } = await supabase
@@ -233,6 +250,11 @@ export default function ContactsTable({
   const handleDelete = async () => {
     if (!deleteTarget) return
     setMutationError(null)
+    if (!supabase) {
+      setMutationError(formatSupabaseConfigurationError('delete contact'))
+      setDeleteTarget(null)
+      return
+    }
 
     const { error } = await supabase
       .from('contacts')

@@ -5,7 +5,10 @@ import { Download, BarChart3, CalendarDays, TrendingUp } from 'lucide-react'
 import AppShell from '@/components/app-shell'
 import { supabase } from '@/lib/supabase'
 import type { Contact } from '@/lib/types'
-import { formatDatabaseError } from '@/lib/db-error'
+import {
+  formatDatabaseError,
+  formatSupabaseConfigurationError,
+} from '@/lib/db-error'
 
 type Status = Contact['status']
 
@@ -133,6 +136,12 @@ export default function ReportsPage() {
   const fetchContacts = useCallback(async () => {
     setLoading(true)
     setError(null)
+    if (!supabase) {
+      setError(formatSupabaseConfigurationError('load reports'))
+      setContacts([])
+      setLoading(false)
+      return
+    }
 
     const { data, error } = await supabase
       .from('contacts')

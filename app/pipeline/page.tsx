@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import AppShell from '@/components/app-shell'
 import { supabase } from '@/lib/supabase'
 import type { Contact } from '@/lib/types'
-import { formatDatabaseError } from '@/lib/db-error'
+import {
+  formatDatabaseError,
+  formatSupabaseConfigurationError,
+} from '@/lib/db-error'
 
 type Status = Contact['status']
 
@@ -95,6 +98,12 @@ export default function PipelinePage() {
   const fetchContacts = useCallback(async () => {
     setLoading(true)
     setError(null)
+    if (!supabase) {
+      setError(formatSupabaseConfigurationError('load pipeline data'))
+      setContacts([])
+      setLoading(false)
+      return
+    }
 
     const { data, error } = await supabase
       .from('contacts')
@@ -122,7 +131,9 @@ export default function PipelinePage() {
   }, [fetchContacts])
 
   useEffect(() => {
-    const channel = supabase
+    if (!supabase) return
+    const supabaseClient = supabase
+    const channel = supabaseClient
       .channel('pipeline-realtime')
       .on(
         'postgres_changes',
@@ -162,7 +173,7 @@ export default function PipelinePage() {
       .subscribe()
 
     return () => {
-      supabase.removeChannel(channel)
+      supabaseClient.removeChannel(channel)
     }
   }, [])
 

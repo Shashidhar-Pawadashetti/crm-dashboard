@@ -34,3 +34,7 @@ export function formatDatabaseError(error: unknown, action: string): string {
 
   return `Unable to ${action}. Please try again.`
 }
+
+export function formatSupabaseConfigurationError(action: string): string {
+  return `Unable to ${action}. Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local and restart the app.`
+}

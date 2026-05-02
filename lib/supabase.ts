@@ -1,18 +1,16 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()
 
-if (!supabaseUrl) {
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey)
+
+if (!isSupabaseConfigured) {
   console.error(
-    '[NexCRM] Missing NEXT_PUBLIC_SUPABASE_URL. Add it to .env.local from Supabase Dashboard > Settings > API.'
+    '[NexCRM] Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local, then restart the app.'
   )
 }
 
-if (!supabaseAnonKey) {
-  console.error(
-    '[NexCRM] Missing NEXT_PUBLIC_SUPABASE_ANON_KEY. Add it to .env.local from Supabase Dashboard > Settings > API > anon/public key.'
-  )
-}
-
-export const supabase = createClient(supabaseUrl ?? '', supabaseAnonKey ?? '')
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl!, supabaseAnonKey!)
+  : null

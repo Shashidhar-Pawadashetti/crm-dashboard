@@ -78,6 +78,16 @@ export default function DashboardCards() {
   useEffect(() => {
     async function fetchKPIs() {
       setLoading(true)
+      if (!supabase) {
+        setData({
+          totalContacts: 0,
+          activeDeals: 0,
+          totalPipeline: 0,
+          newThisMonth: 0,
+        })
+        setLoading(false)
+        return
+      }
 
       // Fetch all contacts to compute KPIs
       const { data: contacts, error } = await supabase
